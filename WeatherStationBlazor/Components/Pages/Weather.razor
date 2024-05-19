@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.SignalR.Client
 @inject WeatherStationBlazor.Data.Bme280Service Bme280Service
 @inject NavigationManager NavigationManager
+@inject ILogger<Weather> Logger
 
 <h3>Real-Time Weather Data</h3>
 
@@ -32,7 +33,7 @@ else
 
         hubConnection.On<double, double, double>("ReceiveSensorData", (temp, hum, pres) =>
         {
-            Console.WriteLine($"Received data: Temperature: {temp}, Humidity: {hum}, Pressure: {pres}");
+            Logger.LogInformation($"Received data: Temperature: {temp}, Humidity: {hum}, Pressure: {pres}");
             temperature = temp;
             humidity = hum;
             pressure = pres;
@@ -41,7 +42,7 @@ else
         });
 
         await hubConnection.StartAsync();
-        Console.WriteLine("Hub connection started");
+        Logger.LogInformation("Hub connection started");
     }
 
     public async ValueTask DisposeAsync()
