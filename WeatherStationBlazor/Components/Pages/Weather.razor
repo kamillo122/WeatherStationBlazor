@@ -1,0 +1,54 @@
+﻿@page "/weather"
+@using Microsoft.AspNetCore.SignalR.Client
+@inject WeatherStationBlazor.Data.Bme280Service Bme280Service
+@inject NavigationManager NavigationManager
+
+<h3>Real-Time Weather Data</h3>
+
+@if (!dataLoaded)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <p>Temperature: @temperature?.ToString("F2") °C</p>
+    <p>Humidity: @humidity?.ToString("F2") %</p>
+    <p>Pressure: @pressure?.ToString("F2") hPa</p>
+}
+
+@code {
+    private double? temperature;
+    private double? humidity;
+    private double? pressure;
+    private bool dataLoaded = false;
+
+    private HubConnection? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/sensorHub"))
+            .Build();
+
+        hubConnection.On<double, double, double>("ReceiveSensorData", (temp, hum, pres) =>
+        {
+            Console.WriteLine($"Received data: Temperature: {temp}, Humidity: {hum}, Pressure: {pres}");
+            temperature = temp;
+            humidity = hum;
+            pressure = pres;
+            dataLoaded = true;
+            InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+        Console.WriteLine("Hub connection started");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}

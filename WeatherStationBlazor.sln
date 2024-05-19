@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34622.214
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeatherStationBlazor", "WeatherStationBlazor\WeatherStationBlazor.csproj", "{C76587CF-5DDF-49DB-9D5A-43E0DD33E4C4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C76587CF-5DDF-49DB-9D5A-43E0DD33E4C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C76587CF-5DDF-49DB-9D5A-43E0DD33E4C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C76587CF-5DDF-49DB-9D5A-43E0DD33E4C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C76587CF-5DDF-49DB-9D5A-43E0DD33E4C4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6869C9C1-50E9-4D4A-9ADB-9D49BEE35233}
+	EndGlobalSection
+EndGlobal
