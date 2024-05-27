@@ -1,13 +1,25 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using System.Threading.Tasks;
 
 namespace WeatherStationBlazor.Data
 {
     public class SensorHub : Hub
     {
-        public async Task SendSensorData(double temperature, double humidity, double pressure)
+        private readonly ILogger<SensorHub> _logger;
+
+        public SensorHub(ILogger<SensorHub> logger)
         {
-            await Clients.All.SendAsync("ReceiveSensorData", temperature, humidity, pressure);
+            _logger = logger;
+        }
+        public override Task OnConnectedAsync()
+        {
+            _logger.LogInformation("Client connected: {ConnectionId}", Context.ConnectionId);
+            return base.OnConnectedAsync();
+        }
+
+        public override Task OnDisconnectedAsync(Exception? exception)
+        {
+            _logger.LogInformation("Client disconnected: {ConnectionId}, Exception: {Exception}", Context.ConnectionId, exception?.Message);
+            return base.OnDisconnectedAsync(exception);
         }
     }
 }

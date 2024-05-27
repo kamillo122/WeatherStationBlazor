@@ -1,11 +1,13 @@
 ﻿@page "/weather"
+@rendermode InteractiveServer
 @using Microsoft.AspNetCore.SignalR.Client
+@using WeatherStationBlazor.Data
 @inject WeatherStationBlazor.Data.Bme280Service Bme280Service
 @inject NavigationManager NavigationManager
 @inject ILogger<Weather> Logger
+@inject SensorDataService SensorDataService
 
 <h3>Real-Time Weather Data</h3>
-
 @if (!dataLoaded)
 {
     <p>Loading...</p>
@@ -17,39 +19,147 @@ else
     <p>Pressure: @pressure?.ToString("F2") hPa</p>
 }
 
+<h3>Weather Data</h3>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Timestamp</th>
+            <th>Temperature (°C)</th>
+            <th>Humidity (%)</th>
+            <th>Pressure (hPa)</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var data in sensorData)
+        {
+            <tr>
+                <td>@data.Timestamp</td>
+                <td>@data.Temperature</td>
+                <td>@data.Humidity</td>
+                <td>@data.Pressure</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
 @code {
     private double? temperature;
     private double? humidity;
     private double? pressure;
     private bool dataLoaded = false;
 
+    private List<SensorData> sensorData = new List<SensorData>();
     private HubConnection? hubConnection;
 
     protected override async Task OnInitializedAsync()
     {
-        hubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/sensorHub"))
-            .Build();
-
-        hubConnection.On<double, double, double>("ReceiveSensorData", (temp, hum, pres) =>
+        try
         {
-            Logger.LogInformation($"Received data: Temperature: {temp}, Humidity: {hum}, Pressure: {pres}");
-            temperature = temp;
-            humidity = hum;
-            pressure = pres;
-            dataLoaded = true;
-            InvokeAsync(StateHasChanged);
-        });
+            Logger.LogInformation("Initializing Hub connection...");
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl(NavigationManager.ToAbsoluteUri("/sensorHub"))
+                .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.Zero, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5) })
+                .ConfigureLogging(logging =>
+                {
+                    logging.AddConsole();
+                    logging.SetMinimumLevel(LogLevel.Debug);
+                })
+                .Build();
 
-        await hubConnection.StartAsync();
-        Logger.LogInformation("Hub connection started");
+            hubConnection.Closed += async (error) =>
+            {
+                Logger.LogError($"Connection closed: {error?.Message}");
+                await Reconnect();
+            };
+
+            hubConnection.On<double, double, double>("ReceiveSensorData", async (temp, hum, pres) =>
+            {
+                Logger.LogInformation($"Received data: Temperature: {temp}, Humidity: {hum}, Pressure: {pres}");
+                dataLoaded = false;
+                temperature = temp;
+                humidity = hum;
+                pressure = pres;
+                sensorData = await SensorDataService.GetSensorDataAsync();
+                dataLoaded = true;
+                await InvokeAsync(StateHasChanged);
+            });
+
+            await StartHubConnectionAsync();
+
+            // Load initial data
+            Logger.LogInformation("Loading initial sensor data...");
+            var data = await Bme280Service.ReadSensorDataAsync();
+            sensorData = await SensorDataService.GetSensorDataAsync();
+            temperature = data.temperature;
+            humidity = data.humidity;
+            pressure = data.pressure;
+            dataLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Error initializing Hub connection: {ex.Message}");
+            dataLoaded = false;
+        }
     }
 
+    private async Task StartHubConnectionAsync()
+    {
+        if (hubConnection != null && hubConnection.State == HubConnectionState.Disconnected)
+        {
+            try
+            {
+                await hubConnection.StartAsync();
+                Logger.LogInformation("Hub connection started successfully.");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Error starting Hub connection: {ex.Message}");
+                await Task.Delay(5000); // Wait for 5 seconds before retrying
+                await StartHubConnectionAsync();
+            }
+        }
+    }
+
+    private async Task Reconnect()
+    {
+        Logger.LogInformation("Attempting to reconnect...");
+        while (hubConnection?.State == HubConnectionState.Disconnected)
+        {
+            try
+            {
+                await hubConnection.StartAsync();
+                Logger.LogInformation("Reconnected to Hub.");
+                return;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Reconnection attempt failed: {ex.Message}");
+                await Task.Delay(2000); // Wait for 2 seconds before retrying
+            }
+        }
+    }
+    /*
     public async ValueTask DisposeAsync()
     {
         if (hubConnection != null)
         {
-            await hubConnection.DisposeAsync();
+            var connection = hubConnection;
+            hubConnection = null;
+
+            try
+            {
+                await connection.StopAsync();
+                Logger.LogInformation("Hub connection stopped successfully.");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Error stopping Hub connection: {ex.Message}");
+            }
+            finally
+            {
+                await connection.DisposeAsync();
+                Logger.LogInformation("Hub connection disposed.");
+            }
         }
-    }
+    } */
 }

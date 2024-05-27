@@ -1,7 +1,33 @@
 ﻿@page "/"
-
+@using WeatherStationBlazor.Data
+@inject NavigationManager NavigationManager
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<h3>Welcome to the Weather Station Project</h3>
 
-Welcome to your new app.
+<p>
+    This project showcases a real-time weather monitoring system using Blazor, SignalR, and a BME280 sensor. The weather station collects data on temperature, humidity, and atmospheric pressure, and updates the data on the web page every 5 seconds.
+</p>
+
+<h4>Features:</h4>
+<ul>
+    <li><b>Real-Time Updates:</b> Using SignalR, the application pushes live sensor data to the web interface, ensuring you always have the latest weather information.</li>
+    <li><b>Data Logging:</b> Sensor data is stored in a SQLite database, allowing for long-term tracking and analysis. Data is collected and saved to the database every hour.</li>
+    <li><b>Blazor Web Assembly:</b> The front-end is built with Blazor, providing a seamless and interactive user experience.</li>
+</ul>
+
+<h4>Technology Stack:</h4>
+<ul>
+    <li><b>Hardware:</b> Raspberry Pi and BME280 sensor for collecting weather data.</li>
+    <li><b>Backend:</b> ASP.NET Core with SignalR for real-time communication.</li>
+    <li><b>Database:</b> SQLite for storing sensor data.</li>
+    <li><b>Frontend:</b> Blazor for a modern, interactive web application.</li>
+</ul>
+
+<p>
+    Explore the live weather data and see how modern web technologies can bring real-time data to your fingertips!
+</p>
+
+<p>
+    <a class="btn btn-primary" href="@NavigationManager.ToAbsoluteUri("/weather")">View Real-Time Weather Data</a>
+</p>
