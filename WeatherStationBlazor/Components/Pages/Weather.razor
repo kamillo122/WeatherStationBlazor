@@ -17,6 +17,7 @@ else
     <p>Temperature: @temperature?.ToString("F2") °C</p>
     <p>Humidity: @humidity?.ToString("F2") %</p>
     <p>Pressure: @pressure?.ToString("F2") hPa</p>
+    <p>Approximate altitude: @altitude?.ToString("F2") m</p>
 }
 
 <h3>Weather Data</h3>
@@ -46,6 +47,7 @@ else
     private double? temperature;
     private double? humidity;
     private double? pressure;
+    private double? altitude;
     private bool dataLoaded = false;
 
     private List<SensorData> sensorData = new List<SensorData>();
@@ -93,6 +95,8 @@ else
             temperature = data.temperature;
             humidity = data.humidity;
             pressure = data.pressure;
+            var approximate_altitude = Bme280Service.ReadAltitude();
+            altitude = approximate_altitude;
             dataLoaded = true;
         }
         catch (Exception ex)
@@ -138,28 +142,11 @@ else
             }
         }
     }
-    /*
     public async ValueTask DisposeAsync()
     {
         if (hubConnection != null)
         {
-            var connection = hubConnection;
-            hubConnection = null;
-
-            try
-            {
-                await connection.StopAsync();
-                Logger.LogInformation("Hub connection stopped successfully.");
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"Error stopping Hub connection: {ex.Message}");
-            }
-            finally
-            {
-                await connection.DisposeAsync();
-                Logger.LogInformation("Hub connection disposed.");
-            }
+            await hubConnection.DisposeAsync();
         }
-    } */
+    }
 }

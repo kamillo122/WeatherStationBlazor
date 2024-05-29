@@ -46,6 +46,7 @@ namespace WeatherStationBlazor.Data
             {
                 try
                 {
+                    await SaveSensorDataToDatabaseAsync(stoppingToken);
                     while (await databaseTimer.WaitForNextTickAsync(stoppingToken))
                     {
                         await SaveSensorDataToDatabaseAsync(stoppingToken);
@@ -72,11 +73,12 @@ namespace WeatherStationBlazor.Data
                 await _hubContext.Clients.All.SendAsync("ReceiveSensorData", temperature, humidity, pressure, cancellationToken: stoppingToken);
 
                 // Buffer the data for database storage
+
                 _sensorDataBuffer.Add(new SensorData
                 {
-                    Temperature = temperature,
-                    Humidity = humidity,
-                    Pressure = pressure,
+                    Temperature = Math.Round(temperature, 2),
+                    Humidity = Math.Round(humidity, 2),
+                    Pressure = Math.Round(pressure, 2),
                     Timestamp = DateTime.UtcNow
                 });
 

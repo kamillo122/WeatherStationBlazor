@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Iot.Device.Bmxx80;
 using Iot.Device.Bmxx80.PowerMode;
 using Microsoft.AspNetCore.SignalR;
+using UnitsNet;
 
 namespace WeatherStationBlazor.Data
 {
@@ -44,6 +45,14 @@ namespace WeatherStationBlazor.Data
                 _logger.LogError(ex, "Error reading sensor data.");
                 throw;
             }
+        }
+        public double ReadAltitude(double seaLevelPressure = 1013.25)
+        {
+            if (_bme280.TryReadAltitude(Pressure.FromHectopascals(seaLevelPressure), out Length altitude))
+            {
+                return altitude.Meters;
+            }
+            return 0;
         }
     }
 }
