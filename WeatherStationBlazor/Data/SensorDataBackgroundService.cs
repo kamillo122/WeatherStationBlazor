@@ -7,7 +7,8 @@ namespace WeatherStationBlazor.Data
         private readonly ILogger<SensorDataBackgroundService> _logger;
         private readonly IHubContext<SensorHub> _hubContext;
         private readonly SensorDataService _sensorDataService;
-        private List<SensorData> _sensorDataBuffer;
+        private readonly List<SensorData> _sensorDataBuffer;
+        private readonly object _bufferLock = new object();
 
         public SensorDataBackgroundService(
             IHubContext<SensorHub> hubContext,
@@ -46,7 +47,6 @@ namespace WeatherStationBlazor.Data
             {
                 try
                 {
-                    await SaveSensorDataToDatabaseAsync(stoppingToken);
                     while (await databaseTimer.WaitForNextTickAsync(stoppingToken))
                     {
                         await SaveSensorDataToDatabaseAsync(stoppingToken);
@@ -59,6 +59,8 @@ namespace WeatherStationBlazor.Data
             }, stoppingToken);
 
             await Task.WhenAll(signalRTask, databaseTask);
+
+            await SaveSensorDataToDatabaseAsync(stoppingToken);
         }
 
         private async Task SendSensorDataAsync(CancellationToken stoppingToken)
@@ -72,15 +74,17 @@ namespace WeatherStationBlazor.Data
 
                 await _hubContext.Clients.All.SendAsync("ReceiveSensorData", temperature, humidity, pressure, cancellationToken: stoppingToken);
 
-                // Buffer the data for database storage
 
-                _sensorDataBuffer.Add(new SensorData
+                lock (_bufferLock)
                 {
-                    Temperature = Math.Round(temperature, 2),
-                    Humidity = Math.Round(humidity, 2),
-                    Pressure = Math.Round(pressure, 2),
-                    Timestamp = DateTime.UtcNow
-                });
+                    _sensorDataBuffer.Add(new SensorData
+                    {
+                        Temperature = Math.Round(temperature, 2),
+                        Humidity = Math.Round(humidity, 2),
+                        Pressure = Math.Round(pressure, 2),
+                        Timestamp = DateTime.UtcNow
+                    });
+                }
 
                 _logger.LogInformation($"Sent data: temp: {temperature}, humidity: {humidity}, pressure: {pressure}");
             }
@@ -94,11 +98,21 @@ namespace WeatherStationBlazor.Data
         {
             try
             {
-                if (_sensorDataBuffer.Count > 0)
+                List<SensorData> bufferCopy;
+                lock (_bufferLock)
                 {
-                    await _sensorDataService.AddSensorDataAsync(_sensorDataBuffer);
+                    bufferCopy = new List<SensorData>(_sensorDataBuffer);
                     _sensorDataBuffer.Clear();
+                }
+
+                if (bufferCopy.Count > 0)
+                {
+                    await _sensorDataService.AddSensorDataAsync(bufferCopy);
                     _logger.LogInformation("Sensor data saved to the database.");
+                }
+                else
+                {
+                    _logger.LogInformation("No sensor data to save to the database.");
                 }
             }
             catch (Exception ex)

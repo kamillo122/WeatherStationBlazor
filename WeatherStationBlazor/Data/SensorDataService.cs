@@ -4,11 +4,11 @@ namespace WeatherStationBlazor.Data
 {
     public class SensorDataService
     {
-        private readonly string _databasePath = "weatherstation.db";
+        private readonly string _databasePath = "Data Source=/home/kamillo122/weatherstation.db";
 
         public async Task AddSensorDataAsync(List<SensorData> dataList)
         {
-            using var connection = new SqliteConnection($"Data Source=/home/kamillo122/deployment_location/{_databasePath}");
+            using var connection = new SqliteConnection(_databasePath);
             await connection.OpenAsync();
 
             using var transaction = await connection.BeginTransactionAsync();
@@ -34,7 +34,7 @@ namespace WeatherStationBlazor.Data
         {
             var data = new List<SensorData>();
 
-            using var connection = new SqliteConnection($"Data Source={_databasePath}");
+            using var connection = new SqliteConnection(_databasePath);
             await connection.OpenAsync();
 
             var command = connection.CreateCommand();

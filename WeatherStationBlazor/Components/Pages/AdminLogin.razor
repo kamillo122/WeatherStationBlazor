@@ -1,0 +1,65 @@
+﻿@page "/admin-login"
+@using WeatherStationBlazor.Data
+@inject AdminAuthService AdminAuthService
+@inject NavigationManager NavigationManager
+@inject ILogger<AdminLogin> Logger
+
+<h3>Admin Login</h3>
+
+@if (!isAuthenticated)
+{
+    <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div>
+            <label>Token: </label>
+            <InputText @bind-Value="loginModel.Token" required />
+        </div>
+        <button type="submit">Login</button>
+    </EditForm>
+}
+else
+{
+    <p>You are already logged in.</p>
+    <button @onclick="HandleLogout">Logout</button>
+}
+
+@code {
+    private LoginModel loginModel = new LoginModel();
+    private bool isAuthenticated = false;
+
+    protected override void OnInitialized()
+    {
+        isAuthenticated = AdminAuthService.IsAuthenticated;
+    }
+
+    private void HandleLogin()
+    {
+        Logger.LogInformation($"Attempting login with token: {loginModel.Token}");
+
+        if (AdminAuthService.Login(loginModel.Token))
+        {
+            isAuthenticated = true;
+            Logger.LogInformation("Login successful.");
+            NavigationManager.NavigateTo("/admin-dashboard");
+        }
+        else
+        {
+            Logger.LogWarning("Login failed.");
+            // Optionally show a message to the user
+        }
+    }
+
+    private void HandleLogout()
+    {
+        AdminAuthService.Logout();
+        isAuthenticated = false;
+        Logger.LogInformation("Logged out.");
+    }
+
+    public class LoginModel
+    {
+        public string Token { get; set; } = string.Empty;
+    }
+}

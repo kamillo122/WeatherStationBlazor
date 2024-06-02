@@ -1,0 +1,20 @@
+﻿@page "/admin-dashboard"
+@using WeatherStationBlazor.Data
+@inject AdminAuthService AdminAuthService
+@inject NavigationManager NavigationManager
+
+@if (!AdminAuthService.IsAuthenticated)
+{
+    <p>Access Denied. You are not authorized to view this page.</p>
+    @code {
+    protected override void OnInitialized()
+    {
+        NavigationManager.NavigateTo("/admin-login");
+    }
+    }
+}
+else
+{
+    <h3>Admin Dashboard</h3>
+    <!-- Admin functionality here -->
+}

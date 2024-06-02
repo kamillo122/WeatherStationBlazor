@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http.Connections;
 using WeatherStationBlazor.Components;
 using WeatherStationBlazor.Data;
 
@@ -12,13 +11,14 @@ namespace WeatherStationBlazor
 
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
-            builder.Services.AddHostedService<SensorDataBackgroundService>();
-            builder.Services.AddSingleton<SensorDataService>();
-            builder.Services.AddSingleton<Bme280Service>();
             builder.Services.AddSignalR(hubOptions =>
             {
                 hubOptions.EnableDetailedErrors = true;
             });
+            builder.Services.AddHostedService<SensorDataBackgroundService>();
+            builder.Services.AddSingleton<SensorDataService>();
+            builder.Services.AddSingleton<Bme280Service>();
+            builder.Services.AddSingleton<AdminAuthService>();
 
             builder.WebHost.ConfigureKestrel(options =>
             {
@@ -33,9 +33,9 @@ namespace WeatherStationBlazor
                 app.UseExceptionHandler("/Error");
                 app.UseHsts();
             }
-
-            app.UseHttpsRedirection();
+            
             app.UseStaticFiles();
+            app.UseRouting();
             app.UseAntiforgery();
 
             app.MapRazorComponents<App>()

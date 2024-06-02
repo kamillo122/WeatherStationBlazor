@@ -21,6 +21,12 @@ else
 }
 
 <h3>Weather Data</h3>
+
+<!-- Search Input and Button -->
+<input type="text" @bind="searchTerm" placeholder="Search by date (yyyy-mm-dd)" />
+<button @onclick="SearchData">Search</button>
+<button @onclick="ClearSearch">Clear</button>
+
 <table class="table">
     <thead>
         <tr>
@@ -31,7 +37,7 @@ else
         </tr>
     </thead>
     <tbody>
-        @foreach (var data in sensorData)
+        @foreach (var data in filteredData)
         {
             <tr>
                 <td>@data.Timestamp</td>
@@ -51,47 +57,59 @@ else
     private bool dataLoaded = false;
 
     private List<SensorData> sensorData = new List<SensorData>();
+    private List<SensorData> filteredData = new List<SensorData>();
+    private string? searchTerm;
+
     private HubConnection? hubConnection;
 
     protected override async Task OnInitializedAsync()
     {
+        await InitializeHubConnectionAsync();
+    }
+
+    private async Task InitializeHubConnectionAsync()
+    {
         try
         {
             Logger.LogInformation("Initializing Hub connection...");
-            hubConnection = new HubConnectionBuilder()
-                .WithUrl(NavigationManager.ToAbsoluteUri("/sensorHub"))
-                .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.Zero, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5) })
-                .ConfigureLogging(logging =>
+            if (hubConnection == null)
+            {
+                hubConnection = new HubConnectionBuilder()
+                    .WithUrl(NavigationManager.ToAbsoluteUri("/sensorHub"))
+                    .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.Zero, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5) })
+                    .ConfigureLogging(logging =>
+                    {
+                        logging.AddConsole();
+                        logging.SetMinimumLevel(LogLevel.Debug);
+                    })
+                    .Build();
+
+                hubConnection.Closed += async (error) =>
                 {
-                    logging.AddConsole();
-                    logging.SetMinimumLevel(LogLevel.Debug);
-                })
-                .Build();
+                    Logger.LogError($"Connection closed: {error?.Message}");
+                    await Reconnect();
+                };
 
-            hubConnection.Closed += async (error) =>
-            {
-                Logger.LogError($"Connection closed: {error?.Message}");
-                await Reconnect();
-            };
-
-            hubConnection.On<double, double, double>("ReceiveSensorData", async (temp, hum, pres) =>
-            {
-                Logger.LogInformation($"Received data: Temperature: {temp}, Humidity: {hum}, Pressure: {pres}");
-                dataLoaded = false;
-                temperature = temp;
-                humidity = hum;
-                pressure = pres;
-                sensorData = await SensorDataService.GetSensorDataAsync();
-                dataLoaded = true;
-                await InvokeAsync(StateHasChanged);
-            });
-
-            await StartHubConnectionAsync();
+                hubConnection.On<double, double, double>("ReceiveSensorData", async (temp, hum, pres) =>
+                {
+                    Logger.LogInformation($"Received data: Temperature: {temp}, Humidity: {hum}, Pressure: {pres}");
+                    dataLoaded = false;
+                    temperature = temp;
+                    humidity = hum;
+                    pressure = pres;
+                    sensorData = await SensorDataService.GetSensorDataAsync();
+                    filteredData = sensorData;
+                    dataLoaded = true;
+                    await InvokeAsync(StateHasChanged);
+                });
+                await StartHubConnectionAsync();
+            }
 
             // Load initial data
             Logger.LogInformation("Loading initial sensor data...");
             var data = await Bme280Service.ReadSensorDataAsync();
             sensorData = await SensorDataService.GetSensorDataAsync();
+            filteredData = sensorData;
             temperature = data.temperature;
             humidity = data.humidity;
             pressure = data.pressure;
@@ -142,11 +160,33 @@ else
             }
         }
     }
+
+    private void SearchData()
+    {
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            filteredData = sensorData
+                .Where(data => data.Timestamp.ToString("yyyy-MM-dd").Contains(searchTerm))
+                .ToList();
+        }
+        else
+        {
+            filteredData = sensorData;
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = string.Empty;
+        filteredData = sensorData;
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (hubConnection != null)
         {
             await hubConnection.DisposeAsync();
+            Logger.LogInformation("Hub connection disposed successfully.");
         }
     }
 }
