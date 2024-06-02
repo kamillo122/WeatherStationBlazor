@@ -1,8 +1,9 @@
 ﻿@page "/admin-login"
+@rendermode InteractiveServer
 @using WeatherStationBlazor.Data
 @inject AdminAuthService AdminAuthService
 @inject NavigationManager NavigationManager
-@inject ILogger<AdminLogin> Logger
+@inject ILogger<Weather> Logger
 
 <h3>Admin Login</h3>
 
@@ -22,7 +23,7 @@
 else
 {
     <p>You are already logged in.</p>
-    <button @onclick="HandleLogout">Logout</button>
+    NavigationManager.NavigateTo("/admin-dashboard");
 }
 
 @code {
@@ -47,7 +48,6 @@ else
         else
         {
             Logger.LogWarning("Login failed.");
-            // Optionally show a message to the user
         }
     }
 

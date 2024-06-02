@@ -1,20 +1,129 @@
 ﻿@page "/admin-dashboard"
+@rendermode InteractiveServer
 @using WeatherStationBlazor.Data
 @inject AdminAuthService AdminAuthService
 @inject NavigationManager NavigationManager
+@inject SensorDataService SensorDataService
+@inject ILogger<Weather> Logger
 
-@if (!AdminAuthService.IsAuthenticated)
+@if (!isAuthenticated)
 {
     <p>Access Denied. You are not authorized to view this page.</p>
-    @code {
-    protected override void OnInitialized()
-    {
-        NavigationManager.NavigateTo("/admin-login");
-    }
-    }
 }
 else
 {
     <h3>Admin Dashboard</h3>
-    <!-- Admin functionality here -->
+    <button @onclick="HandleLogout">Logout</button>
+    <h4>Historical Sensor Data</h4>
+
+    <input type="text" @bind="searchTerm" placeholder="Search by date (yyyy-MM-dd)" />
+    <button @onclick="SearchData">Search</button>
+    <button @onclick="ClearSearch">Clear</button>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Temperature (°C)</th>
+                <th>Humidity (%)</th>
+                <th>Pressure (hPa)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var data in filteredData)
+            {
+                <tr>
+                    <td>@data.Timestamp</td>
+                    <td>@data.Temperature</td>
+                    <td>@data.Humidity</td>
+                    <td>@data.Pressure</td>
+                    <td>
+                        <button @onclick="() => DeleteData(data.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<SensorData> sensorData = new List<SensorData>();
+    private List<SensorData> filteredData = new List<SensorData>();
+    private string? searchTerm;
+    private bool isAuthenticated;
+
+    protected override void OnInitialized()
+    {
+        isAuthenticated = AdminAuthService.IsAuthenticated;
+        Logger.LogInformation($"Admin Authenticated: {isAuthenticated}");
+
+        if (!isAuthenticated)
+        {
+            NavigationManager.NavigateTo("/admin-login");
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (isAuthenticated)
+        {
+            await LoadDataAsync();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            sensorData = await SensorDataService.GetSensorDataAsync();
+            filteredData = sensorData;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Error loading sensor data: {ex.Message}");
+        }
+    }
+
+    private void SearchData()
+    {
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            filteredData = sensorData
+                .Where(data => data.Timestamp.ToString("yyyy-MM-dd").Contains(searchTerm))
+                .ToList();
+        }
+        else
+        {
+            filteredData = sensorData;
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = string.Empty;
+        filteredData = sensorData;
+    }
+
+    private async Task DeleteData(int id)
+    {
+        try
+        {
+            Logger.LogInformation($"Deleting data with ID: {id}");
+            await SensorDataService.DeleteSensorDataAsync(id);
+            await LoadDataAsync();
+            Logger.LogInformation($"Successfully deleted data with ID: {id}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Error deleting sensor data: {ex.Message}");
+        }
+    }
+
+    private void HandleLogout()
+    {
+        AdminAuthService.Logout();
+        NavigationManager.NavigateTo("/admin-login");
+    }
 }

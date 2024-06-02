@@ -60,5 +60,20 @@ namespace WeatherStationBlazor.Data
 
             return data;
         }
+        public async Task DeleteSensorDataAsync(int id)
+        {
+            using var connection = new SqliteConnection(_databasePath);
+            await connection.OpenAsync();
+
+            var command = connection.CreateCommand();
+            command.CommandText =
+            @"
+                DELETE FROM SensorData
+                WHERE Id = $id
+            ";
+            command.Parameters.AddWithValue("$id", id);
+
+            await command.ExecuteNonQueryAsync();
+        }
     }
 }
